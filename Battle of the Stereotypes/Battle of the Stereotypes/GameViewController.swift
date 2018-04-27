@@ -11,9 +11,11 @@ import SpriteKit
 import GameplayKit
 import GameKit
 
-class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurnBasedMatchmakerViewControllerDelegate {
+class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurnBasedMatchmakerViewControllerDelegate, GKLocalPlayerListener {
+    // Scene Instanz
+    var sceneInstance: GameScene!
     // lokales Match
-    var localMatch = GKTurnBasedMatch()
+    var localMatch : GKTurnBasedMatch!
     // Variable ob GameCenter aktiv ist
     var gamecenterEnabled = false
     
@@ -21,17 +23,25 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
     
     // TurnBasedMatchMakerView abgebrochen
     func turnBasedMatchmakerViewControllerWasCancelled(_ viewController: GKTurnBasedMatchmakerViewController) {
+        print("[" + String(describing: self) + "] MatchMakerViewController abgebrochen")
+        
+        // TODO: Abbrechen sollte nicht erlaubt werden
         self.dismiss(animated:true, completion:nil)
+        //findBattleMatch()
     }
     
     // TurnBasedMatchView fehlgeschlagen
     func turnBasedMatchmakerViewController(_ viewController: GKTurnBasedMatchmakerViewController, didFailWithError error: Error) {
+        // TODO: Hier bei Fehlschlag eventuell eine Fehler Meldung ausgeben und es erneut versuchen
+        print("[" + String(describing: self) + "] MatchMakerViewController fehlgeschlagen")
         self.dismiss(animated:true, completion:nil)
     }
     
-    // TurnBasedMatchmakerView Match gefunden
+    // TurnBasedMatchmakerView Match gefunden , bereits existierendes Spiel wird beigetreten
     private func turnBasedMatchmakerViewController(_ viewController: GKMatchmakerViewController, didFind match: GKTurnBasedMatch) {
-        localMatch=match
+        print("[" + String(describing: self) + "] MatchMakerViewController Match gefunden")
+        localMatch = match
+        // TODO: Ab hier ermöglichen das eigentliche Spiel zu spielen
     }
     
     // aufgerufen wenn der GameCenterViewController beendet wird
@@ -39,11 +49,64 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
         gameCenterViewController.dismiss(animated: true, completion: nil)
     }
     
+    // Gibt den Index des lokalen Spieler zum Match zurück. Falls der Spieler nicht teil des Matches ist, gibt es -1 zurück
+    func indexOfLocalPlayer() -> Int {
+        if(!gamecenterIsActive() || !gamecenterGameIsRunning()) {
+            return -1
+        }
+        for participant in localMatch.participants! {
+            if(participant.player == GKLocalPlayer.localPlayer()) {
+                
+            }
+        }
+        return -1
+    }
+    
+    // Gibt an ob der lokale Spieler gerade am Zug ist
+    func islocalPlayersTurn() -> Bool
+    {
+        if(!gamecenterIsActive() || !gamecenterGameIsRunning()) {
+            return false
+        }
+        if(localMatch.currentParticipant?.player == GKLocalPlayer.localPlayer()) {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    // Beendet das Spiel
+    func endGame()
+    {
+        localMatch.endMatchInTurn(withMatch: Data(), completionHandler: nil)
+    }
+    
+    // Prüft ob Gamecenter aktiv ist und gibt false zurück wenn nicht
+    func gamecenterIsActive() -> Bool
+    {
+        if(gamecenterEnabled == false) {
+            print("[" + String(describing: self) + "] Spieler ist nicht eingeloggt")
+            return false
+        } else {
+            return true
+        }
+    }
+    
+    // Prüft ob ein Spiel am Laufen ist und gibt false zurück wenn nicht
+    func gamecenterGameIsRunning() -> Bool
+    {
+        if(localMatch == nil) {
+            print("[" + String(describing: self) + "] Aktion kann nicht ohne ein gestartetes Spiel zu haben ausgeführt werden")
+            return false
+        } else {
+            return true
+        }
+    }
+    
     // Erstelle ein Match Objekt und versuche einem Spiel beizutreten
     func findBattleMatch()
     {
-        if(!gamecenterEnabled) {
-            print("[" + String(describing: self) + "] Spieler ist nicht eingeloggt")
+        if(!gamecenterIsActive()) {
             return
         }
         print("[" + String(describing: self) + "] Beitreten eines... Battle Match")
@@ -66,9 +129,10 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
                 // 1. Zeige den Login Screen wenn der Spieler nicht eingeloggt ist
                 self.present(ViewController!, animated: true, completion: nil)
             } else if (localPlayer.isAuthenticated) {
-                // 2. Wenn Spieler bereits authentifiziert und eingeloggt, lade game center
+                // 2. Wenn Spieler bereits authentifiziert und eingeloggt, lade MatchMaker und GameCenter Funktionen
                 self.gamecenterEnabled = true
-                
+                localPlayer.register(self)
+                self.findBattleMatch()
             } else {
                 // 3. Game center nicht auf aktuellem Gerät aktiviert
                 self.gamecenterEnabled = false
@@ -77,18 +141,60 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
             }
         }
     }
-
-    // Beispielmethode wenn der Spiele seinen Zug beendet hat
+    
+    func player(_ player: GKPlayer, receivedTurnEventFor match: GKTurnBasedMatch, didBecomeActive: Bool) {
+        localMatch=match
+        print("[" + String(describing: self) + "] Turn Event erhalten")
+    }
+    
+    // Beispielmethode wenn der lokale Spieler seinen Zug beendet hat
     func turnEnded(data: Data)
     {
-        //localMatch.endTurn(withNextParticipants: <#T##[GKTurnBasedParticipant]#>, turnTimeout: <#T##TimeInterval#>, match: data, completionHandler: <#T##((Error?) -> Void)?##((Error?) -> Void)?##(Error?) -> Void#>)
+        if(!gamecenterGameIsRunning()) {
+            return
+        }
+        localMatch.endTurn(withNextParticipants: localMatch.participants!, turnTimeout: TimeInterval(0.0), match: Data(), completionHandler: { (error: Error?) in
+            if(error == nil ) {
+                // Do nothing
+            } else {
+                print("[" + String(describing: self) + "]" + "Fehler gefunden")
+                print(error as Any)
+            }
+        })
+        
+    }
+    
+    func turnBasedMatchmakerViewController(_ viewController: GKTurnBasedMatchmakerViewController, playerQuitFor match: GKTurnBasedMatch) {
+        print("[" + String(describing: self) + "]" + "Match wurde beendet durch Player Quit")
+        match.endMatchInTurn(withMatch: Data(), completionHandler: nil)
+    }
+    
+    // Temporäre Funktion um Matches vom GameCenter zu löschen, funktioniert nicht
+    func removeGames()
+    {
+        GKTurnBasedMatch.loadMatches(completionHandler: {(matches: [GKTurnBasedMatch]?, error: Error?) -> Void in
+            if(matches == nil) {
+                print("Keine Matches in denen der lokale Spieler beigetreten ist gefunden")
+                return
+            }
+            print("Versuche Matches in denen der lokale Spieler beigetreten ist zu löschen...")
+            for match in matches.unsafelyUnwrapped {
+                print("Match Outcome setzen")
+                for participant in match.participants! {
+                    participant.matchOutcome = GKTurnBasedMatchOutcome(rawValue: 0)!  }
+                match.endMatchInTurn(withMatch: Data(), completionHandler: {(error: Error?) -> Void in
+                    print("Error in removeGames")
+                    print(error as Any)
+                })
+            }
+        })
     }
     
     override func viewDidLoad() {
         print("[" + String(describing: self) + "] View geladen")
         // Aufrufen von GameCenter Authentifizierung Controller
         authenticateLocalPlayer()
-        findBattleMatch()
+        //removeGames()
         
         super.viewDidLoad()
         
@@ -114,15 +220,18 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
                     
                     view.showsFPS = true
                     view.showsNodeCount = true
+                    
                 }
+                sceneInstance = sceneNode
+                sceneNode.viewController = self
             }
         }
     }
-
+    
     override var shouldAutorotate: Bool {
         return true
     }
-
+    
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         if UIDevice.current.userInterfaceIdiom == .phone {
             return .allButUpsideDown
@@ -130,12 +239,12 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
             return .all
         }
     }
-
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Release any cached data, images, etc that aren't in use.
     }
-
+    
     override var prefersStatusBarHidden: Bool {
         return true
     }

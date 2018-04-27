@@ -13,9 +13,13 @@ import UIKit
 import _SwiftUIKitOverlayShims
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
+    var testLabel: SKLabelNode!
+    var isRed : Bool = false
+    var numberOfRemainingClicks = 20
     
     var entities = [GKEntity]()
     var graphs = [String : GKGraph]()
+    var viewController : GameViewController!
     
     private var lastUpdateTime : TimeInterval = 0
     private var label : SKLabelNode?
@@ -49,7 +53,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     //Hintergrund
     var background: SKSpriteNode!
-
+    
     var fired = true
     
     var leftDummyHealthLabel:SKLabelNode!
@@ -125,6 +129,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         self.addChild(rightDummy)
         
+        testLabel = SKLabelNode(text: "Das ist ein Testlabel")
+        testLabel.text = "Das ist ein Testlabel"
+        testLabel.position = CGPoint(x: self.frame.midX, y: rightDummy.frame.midY)
+        testLabel.fontName = "Americantypewriter-Bold"
+        testLabel.color = UIColor.red
+        testLabel.fontSize = 26
+        testLabel.zPosition=3
+        self.addChild(testLabel)
+        
         leftDummyHealthLabel = SKLabelNode(text: "Health: 100")
         leftDummyHealthLabel.position = CGPoint(x: self.frame.size.width / 2 - 630, y: leftDummy.size.height / 2 + 50)
         leftDummyHealthLabel.fontName = "Americantypewriter-Bold"
@@ -185,7 +198,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         powerBar.position = CGPoint(x: 0, y: 250 )
         powerBar.zPosition = 3
         self.addChild(powerBar)
-     
+        
         initHealthBar()
     }
     
@@ -232,6 +245,26 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
     }
     
+    func switchColor()
+    {
+        if(isRed)
+        {
+            isRed=false
+            testLabel.text="Gelber Spieler"
+            testLabel.fontColor = UIColor.yellow
+        } else {
+            isRed=true
+            testLabel.text="Roter Spieler"
+            testLabel.fontColor = UIColor.red
+        }
+        numberOfRemainingClicks = numberOfRemainingClicks - 1
+        if(numberOfRemainingClicks == 0)
+        {
+            testLabel.text="Spiel zu Ende"
+            viewController.endGame()
+        }
+    }
+    
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         let touch:UITouch = touches.first!
         let pos = touch.location(in: self)
@@ -264,45 +297,51 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if childNode(withName: "arrow") != nil {
             allowsRotation = false
             adjustedArrow = true
-           
+            
         }
         if fireButton.contains(touch.location(in: self)) {
-        buttonTimer.invalidate()
-        powerBar.removeAction(forKey: "powerBarAction")
-         throwProjectile()
+            buttonTimer.invalidate()
+            powerBar.removeAction(forKey: "powerBarAction")
+            throwProjectile()
+        }
+        if(viewController.islocalPlayersTurn()) {
+            print("LocalPlayer Turn")
+            switchColor()
+            self.viewController.turnEnded(data: Data())
+            
         }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let sprite = childNode(withName: "arrow") {
             if(allowsRotation == true){
-            let touch:UITouch = touches.first!
-            let pos = touch.location(in: self)
-            
-            _ = self.atPoint(pos)
-            let touchedNode = self.atPoint(pos)
+                let touch:UITouch = touches.first!
+                let pos = touch.location(in: self)
                 
-            let deltaX = self.arrow.position.x - pos.x
-            let deltaY = self.arrow.position.y - pos.y
-            
-            if(touchedNode.name == "leftdummy"){
+                _ = self.atPoint(pos)
+                let touchedNode = self.atPoint(pos)
+                
+                let deltaX = self.arrow.position.x - pos.x
+                let deltaY = self.arrow.position.y - pos.y
+                
+                if(touchedNode.name == "leftdummy"){
                     angleForArrow = atan2(deltaX, deltaY)
                     angleForArrow = angleForArrow * -1
                     if(0.0 <= angleForArrow + CGFloat(90 * (Double.pi/180)) && 1.5 >= angleForArrow + CGFloat(90 * (Double.pi/180))){
-
+                        
                         sprite.zRotation = angleForArrow + CGFloat(90 * (Double.pi/180))
                         angleForArrow2 = angleForArrow + CGFloat(90 * (Double.pi/180))
                         
                     }
                 }
-            else if(touchedNode.name == "rightdummy"){
-                angleForArrow = atan2(deltaY, deltaX)
-                if(3.0 < angleForArrow + CGFloat(90 * (Double.pi/180)) && 4.5 > angleForArrow + CGFloat(90 * (Double.pi/180))){
-                    sprite.zRotation = (angleForArrow + CGFloat(Double.pi/2)) + CGFloat(90 * (Double.pi/180))
+                else if(touchedNode.name == "rightdummy"){
+                    angleForArrow = atan2(deltaY, deltaX)
+                    if(3.0 < angleForArrow + CGFloat(90 * (Double.pi/180)) && 4.5 > angleForArrow + CGFloat(90 * (Double.pi/180))){
+                        sprite.zRotation = (angleForArrow + CGFloat(Double.pi/2)) + CGFloat(90 * (Double.pi/180))
+                    }
                 }
-                }
-            
-        }
+                
+            }
         }
         
     }
@@ -329,7 +368,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         arrow.name = "arrow"
         
     }
-
+    
     func didBegin(_ contact: SKPhysicsContact){
         var firstBody:SKPhysicsBody
         var secondBody:SKPhysicsBody
@@ -379,7 +418,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         node.texture = SKTexture(image: spriteImage!)
         node.size = barSize
     }
-
+    
     override func update(_ currentTime: TimeInterval) {
         // Called before each frame is rendered
     }
