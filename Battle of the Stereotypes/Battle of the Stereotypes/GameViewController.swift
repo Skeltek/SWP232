@@ -18,17 +18,22 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
     var localMatch : GKTurnBasedMatch!
     // Variable ob GameCenter aktiv ist
     var gamecenterEnabled = false
+    // Spielstatus
+    var gameState : GameState = GameState()
     
-    // Entweder setzen oder raten
-    var gameStatus = "setzen"
-    // Gesetzte Zahlen, wenn -1 dann keine gesetzte Zahl bisher
-    var setNumber = -1
-    var setNumberOfEnemy = -1
-    // Geratene Zahl, wenn -1 dann keine geratene Zahl bisher
-    var betNumber = -1
-    var betNumberOfEnemy = -1
     // Verbleibende Münzen
     var remainingCoins = 3
+    
+    struct GameState {
+        // Entweder setzen oder raten
+        var gameStatus = "setzen"
+        // Gesetzte Zahlen, wenn -1 dann keine gesetzte Zahl bisher
+        var setNumber = -1
+        var setNumberOfEnemy = -1
+        // Geratene Zahl, wenn -1 dann keine geratene Zahl bisher
+        var betNumber = -1
+        var betNumberOfEnemy = -1
+    }
     
     // GKMatchmakerViewControllerDelegate Methoden
     
@@ -158,19 +163,7 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
         localMatch=match
         if(match.participants![0].lastTurnDate != nil) {
             let matchData = localMatch.matchData
-            let coder = NSCoder()
-            coder.encode(matchData)
-            let gameState = coder.decodeBool(forKey: "gameState")
-            if(gameState == true) {
-                gameStatus = "raten"
-            } else {
-                gameStatus = "setzen"
-            }
-            if(gameStatus == "raten") {
-                betNumber = coder.decodeInteger(forKey: "number")
-            } else {
-                setNumber = coder.decodeInteger(forKey: "number")
-            }
+            gameState = decodeGameState(data: matchData! as NSData)
             sceneInstance.updateTextLabels()
         }
         print("[" + String(describing: self) + "] Turn Event erhalten")
@@ -182,14 +175,11 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
         if(!gamecenterGameIsRunning()) {
             return
         }
-        let coder = NSCoder()
-        let isBetMode : Bool = (gameStatus == "raten")
-        coder.encode(isBetMode, forKey: "gameState")
-        if(gameStatus == "raten") {
-            coder.encode(betNumber, forKey: "number") } else {
-            coder.encode(setNumber, forKey: "number")
-        }
-        localMatch.endTurn(withNextParticipants: localMatch.participants!, turnTimeout: TimeInterval(0.0), match:         coder.decodeData()!, completionHandler: { (error: Error?) in
+        print("Turn Ended")
+        let currentIndexOfPlayer : Int = (localMatch.participants?.index(of: localMatch.currentParticipant!))!
+        var nextParticipant : GKTurnBasedParticipant
+        nextParticipant = localMatch.participants![((currentIndexOfPlayer + 1) % (localMatch.participants?.count)!)]
+        localMatch.endTurn(withNextParticipants: [nextParticipant], turnTimeout: TimeInterval(10000.0), match:         encodeGameState() as Data, completionHandler: { (error: Error?) in
             if(error == nil ) {
                 // Do nothing
             } else {
@@ -200,9 +190,23 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
         
     }
     
+    func encodeGameState() -> NSData {
+        return NSData(bytes: &gameState , length: MemoryLayout<GameState>.size)
+    }
+    
+    func decodeGameState(data: NSData) -> GameState {
+        var tempBuffer:GameState? = nil
+        data.getBytes(&tempBuffer, length: MemoryLayout<GameState>.size)
+        if(tempBuffer == nil) {
+            return GameState()
+        } else {
+            return tempBuffer!
+        }
+    }
+    
     func turnBasedMatchmakerViewController(_ viewController: GKTurnBasedMatchmakerViewController, playerQuitFor match: GKTurnBasedMatch) {
         print("[" + String(describing: self) + "]" + "Match wurde beendet durch Player Quit")
-        match.endMatchInTurn(withMatch: Data(), completionHandler: nil)
+        match.endMatchInTurn(withMatch: encodeGameState() as Data, completionHandler: nil)
     }
     
     // Temporäre Funktion um Matches vom GameCenter zu löschen, funktioniert nicht
@@ -228,22 +232,14 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
     
     func setMatchOutcome()
     {
-        GKTurnBasedMatch.loadMatches(completionHandler: {(matches: [GKTurnBasedMatch]?, error: Error?) -> Void in
-            if(matches == nil) {
-                print("Keine Matches in denen der lokale Spieler beigetreten ist gefunden")
-                return
+        print("Versuche Match Outcomes zu setzen")
+        print("Match Outcome setzen")
+        for participant in localMatch.participants! {
+            participant.matchOutcome = GKTurnBasedMatchOutcome.none
+            if(participant.player?.playerID == GKLocalPlayer.localPlayer().playerID && self.remainingCoins == 0) {
+                participant.matchOutcome = GKTurnBasedMatchOutcome.won
             }
-            print("Versuche Matches in denen der lokale Spieler beigetreten ist zu löschen...")
-            for match in matches.unsafelyUnwrapped {
-                print("Match Outcome setzen")
-                for participant in match.participants! {
-                    participant.matchOutcome = GKTurnBasedMatchOutcome.none
-                    if(participant.player?.playerID == GKLocalPlayer.localPlayer().playerID && self.remainingCoins == 0) {
-                        participant.matchOutcome = GKTurnBasedMatchOutcome.won
-                    }
-                }
-            }
-        })
+        }
     }
     
     override func viewDidLoad() {

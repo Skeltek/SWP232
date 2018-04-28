@@ -310,7 +310,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         } else {
             temp = "Spieler: Gegner,"
         }
-        if(viewController.gameStatus == "setzen") {
+        if(viewController.gameState.gameStatus == "setzen") {
             statusLabel.text = temp + "setze Münzen!"
         } else {
             statusLabel.text = temp + "rate wieviel Münzen im Spiel sind!"
@@ -358,38 +358,38 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         
         if(viewController.islocalPlayersTurn() && label1.contains(touch.location(in: self))) {
-            if(viewController.gameStatus == "raten") {
-                viewController.betNumber = 1
+            if(viewController.gameState.gameStatus == "raten") {
+                viewController.gameState.betNumber = 1
             } else {
-                viewController.setNumber = 1
+                viewController.gameState.setNumber = 1
             }
             setNumberLabelsToRed()
             label1.fontColor = UIColor.yellow
         }
         if(viewController.islocalPlayersTurn() && label2.contains(touch.location(in: self))) {
-            if(viewController.gameStatus == "raten") {
-                viewController.betNumber = 2
+            if(viewController.gameState.gameStatus == "raten") {
+                viewController.gameState.betNumber = 2
             } else {
-                viewController.setNumber = 2
+                viewController.gameState.setNumber = 2
             }
             setNumberLabelsToRed()
             label2.fontColor = UIColor.yellow
         }
         if(viewController.islocalPlayersTurn() && label3.contains(touch.location(in: self))) {
             
-            if(viewController.gameStatus == "raten") {
-                viewController.betNumber = 3
+            if(viewController.gameState.gameStatus == "raten") {
+                viewController.gameState.betNumber = 3
             } else {
-                viewController.setNumber = 3
+                viewController.gameState.setNumber = 3
             }
             setNumberLabelsToRed()
-            label1.fontColor = UIColor.yellow
+            label3.fontColor = UIColor.yellow
         }
         if(viewController.islocalPlayersTurn() && labelChangeTurn.contains(touch.location(in: self))) {
-            if(viewController.betNumber == -1 && viewController.gameStatus == "raten") {
+            if(viewController.gameState.betNumber == -1 && viewController.gameState.gameStatus == "raten") {
                 return
             }
-            if(viewController.setNumber == -1 && viewController.gameStatus == "setzen") {
+            if(viewController.gameState.setNumber == -1 && viewController.gameState.gameStatus == "setzen") {
                 return
             }
             viewController.setMatchOutcome()
