@@ -19,6 +19,17 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
     // Variable ob GameCenter aktiv ist
     var gamecenterEnabled = false
     
+    // Entweder setzen oder raten
+    var gameStatus = "setzen"
+    // Gesetzte Zahlen, wenn -1 dann keine gesetzte Zahl bisher
+    var setNumber = -1
+    var setNumberOfEnemy = -1
+    // Geratene Zahl, wenn -1 dann keine geratene Zahl bisher
+    var betNumber = -1
+    var betNumberOfEnemy = -1
+    // Verbleibende Münzen
+    var remainingCoins = 3
+    
     // GKMatchmakerViewControllerDelegate Methoden
     
     // TurnBasedMatchMakerView abgebrochen
@@ -55,7 +66,7 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
             return -1
         }
         for participant in localMatch.participants! {
-            if(participant.player == GKLocalPlayer.localPlayer()) {
+            if(participant.player?.playerID == GKLocalPlayer.localPlayer().playerID) {
                 
             }
         }
@@ -68,7 +79,7 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
         if(!gamecenterIsActive() || !gamecenterGameIsRunning()) {
             return false
         }
-        if(localMatch.currentParticipant?.player == GKLocalPlayer.localPlayer()) {
+        if(localMatch.currentParticipant?.player?.playerID == GKLocalPlayer.localPlayer().playerID) {
             return true
         } else {
             return false
@@ -131,6 +142,7 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
             } else if (localPlayer.isAuthenticated) {
                 // 2. Wenn Spieler bereits authentifiziert und eingeloggt, lade MatchMaker und GameCenter Funktionen
                 self.gamecenterEnabled = true
+                localPlayer.unregisterAllListeners()
                 localPlayer.register(self)
                 self.findBattleMatch()
             } else {
@@ -144,16 +156,40 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
     
     func player(_ player: GKPlayer, receivedTurnEventFor match: GKTurnBasedMatch, didBecomeActive: Bool) {
         localMatch=match
+        if(match.participants![0].lastTurnDate != nil) {
+            let matchData = localMatch.matchData
+            let coder = NSCoder()
+            coder.encode(matchData)
+            let gameState = coder.decodeBool(forKey: "gameState")
+            if(gameState == true) {
+                gameStatus = "raten"
+            } else {
+                gameStatus = "setzen"
+            }
+            if(gameStatus == "raten") {
+                betNumber = coder.decodeInteger(forKey: "number")
+            } else {
+                setNumber = coder.decodeInteger(forKey: "number")
+            }
+            sceneInstance.updateTextLabels()
+        }
         print("[" + String(describing: self) + "] Turn Event erhalten")
     }
     
     // Beispielmethode wenn der lokale Spieler seinen Zug beendet hat
-    func turnEnded(data: Data)
+    func turnEnded()
     {
         if(!gamecenterGameIsRunning()) {
             return
         }
-        localMatch.endTurn(withNextParticipants: localMatch.participants!, turnTimeout: TimeInterval(0.0), match: Data(), completionHandler: { (error: Error?) in
+        let coder = NSCoder()
+        let isBetMode : Bool = (gameStatus == "raten")
+        coder.encode(isBetMode, forKey: "gameState")
+        if(gameStatus == "raten") {
+            coder.encode(betNumber, forKey: "number") } else {
+            coder.encode(setNumber, forKey: "number")
+        }
+        localMatch.endTurn(withNextParticipants: localMatch.participants!, turnTimeout: TimeInterval(0.0), match:         coder.decodeData()!, completionHandler: { (error: Error?) in
             if(error == nil ) {
                 // Do nothing
             } else {
@@ -181,11 +217,31 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
             for match in matches.unsafelyUnwrapped {
                 print("Match Outcome setzen")
                 for participant in match.participants! {
-                    participant.matchOutcome = GKTurnBasedMatchOutcome(rawValue: 0)!  }
+                    participant.matchOutcome = GKTurnBasedMatchOutcome.quit  }
                 match.endMatchInTurn(withMatch: Data(), completionHandler: {(error: Error?) -> Void in
                     print("Error in removeGames")
                     print(error as Any)
                 })
+            }
+        })
+    }
+    
+    func setMatchOutcome()
+    {
+        GKTurnBasedMatch.loadMatches(completionHandler: {(matches: [GKTurnBasedMatch]?, error: Error?) -> Void in
+            if(matches == nil) {
+                print("Keine Matches in denen der lokale Spieler beigetreten ist gefunden")
+                return
+            }
+            print("Versuche Matches in denen der lokale Spieler beigetreten ist zu löschen...")
+            for match in matches.unsafelyUnwrapped {
+                print("Match Outcome setzen")
+                for participant in match.participants! {
+                    participant.matchOutcome = GKTurnBasedMatchOutcome.none
+                    if(participant.player?.playerID == GKLocalPlayer.localPlayer().playerID && self.remainingCoins == 0) {
+                        participant.matchOutcome = GKTurnBasedMatchOutcome.won
+                    }
+                }
             }
         })
     }
@@ -224,6 +280,7 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
                 }
                 sceneInstance = sceneNode
                 sceneNode.viewController = self
+                sceneNode.initMyLabels()
             }
         }
     }

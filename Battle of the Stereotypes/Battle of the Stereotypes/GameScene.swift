@@ -13,9 +13,16 @@ import UIKit
 import _SwiftUIKitOverlayShims
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
-    var testLabel: SKLabelNode!
-    var isRed : Bool = false
-    var numberOfRemainingClicks = 20
+    // Zeigt an wer dran ist und was man tun soll
+    var statusLabel: SKLabelNode!
+    // Zeigt an wieviel Münzen man hat
+    var coinLabel : SKLabelNode!
+    // Zeigt die Zahlen an
+    var label1 : SKLabelNode!
+    var label2 : SKLabelNode!
+    var label3 : SKLabelNode!
+    // Label zum Zug abgeben
+    var labelChangeTurn : SKLabelNode!
     
     var entities = [GKEntity]()
     var graphs = [String : GKGraph]()
@@ -82,6 +89,64 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     var playerHP = 100
     
+    func initMyLabels()
+    {
+        // Testspiel Labels
+        // Statustext
+        statusLabel = SKLabelNode(text: "Spieler: DU, setze Münzen!")
+        statusLabel.position = CGPoint(x: self.frame.midX, y: rightDummy.frame.midY - 25)
+        statusLabel.fontName = "Americantypewriter-Bold"
+        statusLabel.color = UIColor.red
+        statusLabel.fontSize = 26
+        statusLabel.zPosition=3
+        self.addChild(statusLabel)
+        
+        // Münzlabel
+        coinLabel = SKLabelNode(text: "Verbleibende Münzen: " + String(viewController.remainingCoins))
+        coinLabel.position = CGPoint(x: self.frame.midX, y: rightDummy.frame.midY)
+        coinLabel.fontName = "Americantypewriter-Bold"
+        coinLabel.color = UIColor.red
+        coinLabel.fontSize = 26
+        coinLabel.zPosition=3
+        self.addChild(coinLabel)
+        
+        // Münzlabel
+        labelChangeTurn = SKLabelNode(text: "Zug abgeben an anderen Spieler")
+        labelChangeTurn.position = CGPoint(x: self.frame.midX, y: rightDummy.frame.midY + 135)
+        labelChangeTurn.fontName = "Americantypewriter-Bold"
+        labelChangeTurn.color = UIColor.red
+        labelChangeTurn.fontSize = 26
+        labelChangeTurn.zPosition=3
+        self.addChild(labelChangeTurn)
+        
+        // Zahl 1
+        label1 = SKLabelNode(text: "1")
+        label1.position = CGPoint(x: self.frame.midX + 230, y: rightDummy.frame.midY - 20)
+        label1.fontName = "Americantypewriter-Bold"
+        label1.color = UIColor.red
+        label1.fontSize = 26
+        label1.zPosition=3
+        self.addChild(label1)
+        
+        // Zahl 2
+        label2 = SKLabelNode(text: "2")
+        label2.position = CGPoint(x: self.frame.midX + 230, y: rightDummy.frame.midY + 20)
+        label2.fontName = "Americantypewriter-Bold"
+        label2.color = UIColor.red
+        label2.fontSize = 26
+        label2.zPosition=3
+        self.addChild(label2)
+        
+        // Zahl 3
+        label3 = SKLabelNode(text: "3")
+        label3.position = CGPoint(x: self.frame.midX + 230, y: rightDummy.frame.midY + 60)
+        label3.fontName = "Americantypewriter-Bold"
+        label3.color = UIColor.red
+        label3.fontSize = 26
+        label3.zPosition=3
+        self.addChild(label3)
+    }
+    
     override func didMove(to view: SKView) {
         //initialisiere den Boden
         let groundTexture = SKTexture(imageNamed: "Boden")
@@ -128,15 +193,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         rightDummy.zPosition=3
         
         self.addChild(rightDummy)
-        
-        testLabel = SKLabelNode(text: "Das ist ein Testlabel")
-        testLabel.text = "Das ist ein Testlabel"
-        testLabel.position = CGPoint(x: self.frame.midX, y: rightDummy.frame.midY)
-        testLabel.fontName = "Americantypewriter-Bold"
-        testLabel.color = UIColor.red
-        testLabel.fontSize = 26
-        testLabel.zPosition=3
-        self.addChild(testLabel)
         
         leftDummyHealthLabel = SKLabelNode(text: "Health: 100")
         leftDummyHealthLabel.position = CGPoint(x: self.frame.size.width / 2 - 630, y: leftDummy.size.height / 2 + 50)
@@ -245,23 +301,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
     }
     
-    func switchColor()
+    func updateTextLabels()
     {
-        if(isRed)
-        {
-            isRed=false
-            testLabel.text="Gelber Spieler"
-            testLabel.fontColor = UIColor.yellow
+        var temp = ""
+        coinLabel.text = "Verbleibende Münzen: " + String(viewController.remainingCoins)
+        if(viewController.islocalPlayersTurn()) {
+            temp = "Spieler: DU,"
         } else {
-            isRed=true
-            testLabel.text="Roter Spieler"
-            testLabel.fontColor = UIColor.red
+            temp = "Spieler: Gegner,"
         }
-        numberOfRemainingClicks = numberOfRemainingClicks - 1
-        if(numberOfRemainingClicks == 0)
-        {
-            testLabel.text="Spiel zu Ende"
-            viewController.endGame()
+        if(viewController.gameStatus == "setzen") {
+            statusLabel.text = temp + "setze Münzen!"
+        } else {
+            statusLabel.text = temp + "rate wieviel Münzen im Spiel sind!"
         }
     }
     
@@ -304,12 +356,52 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             powerBar.removeAction(forKey: "powerBarAction")
             throwProjectile()
         }
-        if(viewController.islocalPlayersTurn()) {
-            print("LocalPlayer Turn")
-            switchColor()
-            self.viewController.turnEnded(data: Data())
-            
+        
+        if(viewController.islocalPlayersTurn() && label1.contains(touch.location(in: self))) {
+            if(viewController.gameStatus == "raten") {
+                viewController.betNumber = 1
+            } else {
+                viewController.setNumber = 1
+            }
+            setNumberLabelsToRed()
+            label1.fontColor = UIColor.yellow
         }
+        if(viewController.islocalPlayersTurn() && label2.contains(touch.location(in: self))) {
+            if(viewController.gameStatus == "raten") {
+                viewController.betNumber = 2
+            } else {
+                viewController.setNumber = 2
+            }
+            setNumberLabelsToRed()
+            label2.fontColor = UIColor.yellow
+        }
+        if(viewController.islocalPlayersTurn() && label3.contains(touch.location(in: self))) {
+            
+            if(viewController.gameStatus == "raten") {
+                viewController.betNumber = 3
+            } else {
+                viewController.setNumber = 3
+            }
+            setNumberLabelsToRed()
+            label1.fontColor = UIColor.yellow
+        }
+        if(viewController.islocalPlayersTurn() && labelChangeTurn.contains(touch.location(in: self))) {
+            if(viewController.betNumber == -1 && viewController.gameStatus == "raten") {
+                return
+            }
+            if(viewController.setNumber == -1 && viewController.gameStatus == "setzen") {
+                return
+            }
+            viewController.setMatchOutcome()
+            viewController.turnEnded()
+        }
+    }
+    
+    func setNumberLabelsToRed()
+    {
+        label1.fontColor = UIColor.red
+        label2.fontColor = UIColor.red
+        label3.fontColor = UIColor.red
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
