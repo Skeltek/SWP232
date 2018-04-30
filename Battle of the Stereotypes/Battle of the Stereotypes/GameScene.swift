@@ -102,7 +102,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         self.addChild(statusLabel)
         
         // Münzlabel
-        coinLabel = SKLabelNode(text: "Verbleibende Münzen: " + String(viewController.remainingCoins))
+        coinLabel = SKLabelNode(text: "Verbleibende Münzen: 3")
         coinLabel.position = CGPoint(x: self.frame.midX, y: rightDummy.frame.midY)
         coinLabel.fontName = "Americantypewriter-Bold"
         coinLabel.color = UIColor.red
@@ -304,7 +304,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func updateTextLabels()
     {
         var temp = ""
-        coinLabel.text = "Verbleibende Münzen: " + String(viewController.remainingCoins)
+        coinLabel.text = "Verbleibende Münzen: " + String(viewController.gameState.remainingCoins[viewController.indexOfLocalPlayer()])
         if(viewController.islocalPlayersTurn()) {
             temp = "Spieler: DU,"
         } else {
@@ -359,18 +359,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         if(viewController.islocalPlayersTurn() && label1.contains(touch.location(in: self))) {
             if(viewController.gameState.gameStatus == "raten") {
-                viewController.gameState.betNumber = 1
+                viewController.gameState.betNumber[viewController.indexOfLocalPlayer()] = 1
             } else {
-                viewController.gameState.setNumber = 1
+                viewController.gameState.setNumber[viewController.indexOfLocalPlayer()] = 1
             }
             setNumberLabelsToRed()
             label1.fontColor = UIColor.yellow
         }
         if(viewController.islocalPlayersTurn() && label2.contains(touch.location(in: self))) {
             if(viewController.gameState.gameStatus == "raten") {
-                viewController.gameState.betNumber = 2
+                viewController.gameState.betNumber[viewController.indexOfLocalPlayer()] = 2
             } else {
-                viewController.gameState.setNumber = 2
+                viewController.gameState.setNumber[viewController.indexOfLocalPlayer()] = 2
             }
             setNumberLabelsToRed()
             label2.fontColor = UIColor.yellow
@@ -378,20 +378,21 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if(viewController.islocalPlayersTurn() && label3.contains(touch.location(in: self))) {
             
             if(viewController.gameState.gameStatus == "raten") {
-                viewController.gameState.betNumber = 3
+                viewController.gameState.betNumber[viewController.indexOfLocalPlayer()] = 3
             } else {
-                viewController.gameState.setNumber = 3
+                viewController.gameState.setNumber[viewController.indexOfLocalPlayer()] = 3
             }
             setNumberLabelsToRed()
             label3.fontColor = UIColor.yellow
         }
         if(viewController.islocalPlayersTurn() && labelChangeTurn.contains(touch.location(in: self))) {
-            if(viewController.gameState.betNumber == -1 && viewController.gameState.gameStatus == "raten") {
+            if(viewController.gameState.betNumber[viewController.indexOfLocalPlayer()] == -1 && viewController.gameState.gameStatus == "raten") {
                 return
             }
-            if(viewController.gameState.setNumber == -1 && viewController.gameState.gameStatus == "setzen") {
+            if(viewController.gameState.setNumber[viewController.indexOfLocalPlayer()] == -1 && viewController.gameState.gameStatus == "setzen") {
                 return
             }
+            print("Scene: Turn abgeben")
             viewController.setMatchOutcome()
             viewController.turnEnded()
         }
