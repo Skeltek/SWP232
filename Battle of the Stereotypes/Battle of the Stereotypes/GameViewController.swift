@@ -244,6 +244,11 @@ class GameViewController: UIViewController,GKGameCenterControllerDelegate,GKTurn
         }
     }
     
+    //func exchangeTest(someInteger: Int) -> Int {
+    var exchange : [GKTurnBasedExchange]? { get}
+    //}
+    
+    
     func turnBasedMatchmakerViewController(_ viewController: GKTurnBasedMatchmakerViewController, playerQuitFor match: GKTurnBasedMatch) {
         print("[" + String(describing: self) + "]" + "Match wurde beendet durch Player Quit")
         match.endMatchInTurn(withMatch: encodeGameState(gameState: gameState), completionHandler: nil)
