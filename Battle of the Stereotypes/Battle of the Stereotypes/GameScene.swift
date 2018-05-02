@@ -303,6 +303,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             buttonTimer.invalidate()
             powerBar.removeAction(forKey: "powerBarAction")
             throwProjectile()
+            powerBarReset()
+            fireMode = false;
+            allowsRotation = true
         }
         if(viewController.islocalPlayersTurn()) {
             print("LocalPlayer Turn")
