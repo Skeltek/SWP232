@@ -11,13 +11,19 @@ import SpriteKit
 import GameplayKit
 
 class GameViewController: UIViewController {
-
+    static var germanMapScene : GermanMap!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
         // Load 'GameScene.sks' as a GKScene. This provides gameplay related content
         // including entities and graphs.
         if let scene = GKScene(fileNamed: "GermanMap") {
+            
+            GameCenterHelper.getInstance().underlyingViewController=self
+            GameCenterHelper.getInstance().authenticateLocalPlayer()
+            // Alle Games, an denen man teilnimmt vom GameCenter löschen für Testzwecke
+            // GameCenterHelper.getInstance().removeGames()
             
             // Get the SKScene from the loaded GKScene
             if let sceneNode = scene.rootNode as! GermanMap? {
@@ -29,6 +35,7 @@ class GameViewController: UIViewController {
                 // Set the scale mode to scale to fit the window
                 sceneNode.scaleMode = .aspectFill
                 
+                GameViewController.germanMapScene = sceneNode
                 // Present the scene
                 if let view = self.view as! SKView? {
                     view.presentScene(sceneNode)
