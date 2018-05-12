@@ -11,6 +11,7 @@ import GameplayKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
+    var test : Int = 0
     //Booleans
     var allowsRotation = true //zeigt ob Geschoss rotieren darf
     var adjustedArrow = false //zeigt ob Pfeil eingestellt wurde
