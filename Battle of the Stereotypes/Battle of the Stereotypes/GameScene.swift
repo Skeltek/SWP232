@@ -11,6 +11,7 @@ import GameplayKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
+    var test2 : Int = 0
     var test : Int = 0
     //Booleans
     var allowsRotation = true //zeigt ob Geschoss rotieren darf
