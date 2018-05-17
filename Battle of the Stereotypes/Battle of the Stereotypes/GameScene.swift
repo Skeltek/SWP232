@@ -125,7 +125,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         if initialized{
             updateStatusLabel()
-        }
+            germanMapReference.player1.id? = GameCenterHelper.getInstance().getIndexOfLocalPlayer()
+            germanMapReference.player2.id? = GameCenterHelper.getInstance().getIndexOfOtherPlayer()        }
         initBall(for: GameCenterHelper.getInstance().gameState.turnOwnerActive)
     }
     
