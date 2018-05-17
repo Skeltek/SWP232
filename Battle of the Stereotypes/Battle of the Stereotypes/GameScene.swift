@@ -117,13 +117,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     /** Aktualisiert lokale Variablen */
     func updateStats(){
         if (GameCenterHelper.getInstance().getIndexOfLocalPlayer()==GameCenterHelper.getInstance().gameState.turnOwnerActive){
+            print("+++Touchpad unlocked+++")
             touchpadLocked = false
         } else {
             touchpadLocked = true
+            print("---Touchpad locked---")
         }
         if initialized{
-            germanMapReference.player1.id? = GameCenterHelper.getInstance().getIndexOfLocalPlayer()
-            germanMapReference.player2.id? = GameCenterHelper.getInstance().getIndexOfOtherPlayer()
             updateStatusLabel()
         }
         initBall(for: GameCenterHelper.getInstance().gameState.turnOwnerActive)
@@ -331,9 +331,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             } else {
                 statusText += "Spieler: Gegner "
             }
-        print("leftDummyID: \(leftDummyID!)")
-        print("activePlayerID: \(StartScene.germanMapScene.activePlayerID)")
-            if(leftDummyID! == StartScene.germanMapScene.activePlayerID) {
+            if(leftDummyID! == GameCenterHelper.getInstance().gameState.turnOwnerActive) {
                 statusText += "(links)"
             } else {
                 statusText += "(rechts)"
@@ -383,9 +381,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?){
         print("Spieler aktiv: \(GameCenterHelper.getInstance().gameState.turnOwnerActive)")
-        print("player1.id: \(germanMapReference.player1.id)")
+        print("Eigene ID: \(germanMapReference.player1.id)")
         print("leftDummyID: \(leftDummyID)")
-        print("rightDummyID: \(rightDummyID)")
+        print("rightDummyID: \(rightDummyID)\n")
         //Keine Eingabe bei aktiviertem Lock
         if (touchpadLocked){
             return
@@ -489,7 +487,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 }
                 else if(touchedNode.name == "rightdummy"){
                     angleForArrow = atan2(deltaY, deltaX)
-                    if(0 <= angleForArrow && CGFloat(Double.pi) >= angleForArrow){
+                    if(0 <= angleForArrow && angleForArrow <= CGFloat(Double.pi)){
                         sprite.zRotation = angleForArrow
                         angleForArrow2 = angleForArrow
                     }
@@ -601,10 +599,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     func transitToGermanMap(){
-        //switch turn
-        // TODO: Switch Turn später duch Turn abgeben im GameCenterHelper ersetzen
-        germanMapReference.turnPlayerID = (germanMapReference.turnPlayerID == 1) ? 2 : 1
-        germanMapReference.activePlayerID = 0
         self.view?.presentScene(germanMapReference)
     }
     
